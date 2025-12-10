@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="52" viewBox="0 0 240 52" fill="none">
+  <rect width="240" height="52" rx="12" fill="#020617" />
+  <rect x="4" y="4" width="232" height="44" rx="10" fill="#0F172A" />
+  <rect x="8" y="8" width="68" height="36" rx="10" fill="#1D4ED8" />
+  <text
+    x="42"
+    y="31"
+    text-anchor="middle"
+    font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+    font-size="26"
+    font-weight="700"
+    fill="white"
+  >P8</text>
+  <text
+    x="88"
+    y="21"
+    font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+    font-size="16"
+    font-weight="600"
+    fill="white"
+  >Pista 8</text>
+  <text
+    x="88"
+    y="38"
+    font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+    font-size="16"
+    font-weight="500"
+    fill="#93C5FD"
+  >Inovation</text>
+</svg>
