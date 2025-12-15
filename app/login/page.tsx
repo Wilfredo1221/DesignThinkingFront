@@ -2,33 +2,43 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AuthLayout } from "@/components/auth-layout"
 import { useAuth } from "@/components/auth-provider"
+import { useToast } from "@/hooks/use-toast"
 
 export default function LoginPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const roleParam = searchParams.get("role")
   const { login } = useAuth()
-  
+  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    login("Ronny Rau", (roleParam as "participant" | "client") || "participant", "usuario@ejemplo.com")
-    
-    setIsLoading(false)
-    router.push("/dashboard")
+
+    try {
+      await login(formData.email, formData.password)
+      toast({
+        title: "¡Bienvenido!",
+        description: "Has iniciado sesión correctamente.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Credenciales incorrectas",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -44,11 +54,11 @@ export default function LoginPage() {
             type="email" 
             placeholder="ejemplo@correo.com" 
             required 
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             className="h-12 rounded-xl bg-background/50"
           />
         </div>
-
-        {/* Removed ID number field */}
 
         <div className="space-y-2">
           <Label htmlFor="password">Contraseña</Label>
@@ -58,6 +68,8 @@ export default function LoginPage() {
               type={showPassword ? "text" : "password"} 
               placeholder="••••••••" 
               required 
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               className="h-12 rounded-xl bg-background/50 pr-10"
             />
             <button

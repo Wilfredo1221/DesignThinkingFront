@@ -1,41 +1,19 @@
-// lib/api.ts
-// Servicio API central para comunicación con Laravel Backend
+// lib/api.ts - COMPLETO Y MEJORADO
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
-
-// Tipos de respuesta
-interface ApiResponse<T> {
-  data?: T
-  message?: string
-  errors?: Record<string, string[]>
-}
-
-// Configuración de Sanctum para cookies CSRF
-const sanctumConfig = {
-  credentials: 'include' as RequestCredentials,
-  headers: {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  }
-}
-
-// Helper: Obtener token de localStorage
-const getToken = (): string | null => {
+export const getToken = (): string | null => {
   if (typeof window === 'undefined') return null
   return localStorage.getItem('auth_token')
 }
 
-// Helper: Guardar token
 export const saveToken = (token: string) => {
   localStorage.setItem('auth_token', token)
 }
 
-// Helper: Eliminar token
 export const removeToken = () => {
   localStorage.removeItem('auth_token')
 }
 
-// Fetch wrapper con manejo de errores y token
 async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -43,26 +21,17 @@ async function apiFetch<T>(
   const token = getToken()
   
   const config: RequestInit = {
-    ...sanctumConfig,
     ...options,
     headers: {
-      ...sanctumConfig.headers,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers,
     },
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, config)
-    
-    // Si es 401, el token expiró
-    if (response.status === 401) {
-      removeToken()
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login'
-      }
-    }
-
+    const response = await fetch(`${API_BASE_URL}/api${endpoint}`, config)
     const data = await response.json()
 
     if (!response.ok) {
@@ -77,7 +46,7 @@ async function apiFetch<T>(
 }
 
 // ============================================
-// AUTENTICACIÓN
+// TIPOS
 // ============================================
 
 export interface RegisterData {
@@ -87,11 +56,9 @@ export interface RegisterData {
   password_confirmation: string
   telefono?: string
   tipo_usuario: 'cliente' | 'participante' | 'ambos'
-  // Cliente
   empresa?: string
   cargo?: string
   industria?: string
-  // Participante
   profesion?: string
   biografia?: string
 }
@@ -118,7 +85,92 @@ export interface AuthResponse {
   user: User
   access_token: string
   token_type: string
+  email_verified?: boolean
 }
+
+export interface Ideacion {
+  id: number
+  titulo: string
+  descripcion: string
+  categoria: string
+  estado: 'abierta' | 'cerrada'
+  fecha_cierre?: string
+  created_at?: string
+  ideas?: Idea[]
+}
+
+export interface Idea {
+  id: number
+  ideacion_id: number
+  titulo: string
+  descripcion: string
+  votos_count: number
+  comentarios_count: number
+  color?: 'verde' | 'amarillo' | 'rojo'
+  color_filtro?: 'verde' | 'amarillo' | 'rojo'
+  seleccionada?: boolean
+  created_at: string
+  ideacion: {
+    id: number
+    titulo: string
+    estado: string
+  }
+}
+
+export interface Proyecto {
+  id: number
+  titulo: string
+  descripcion: string
+  nicho: string
+  estado: 'abierto' | 'cerrado'
+  presupuesto_minimo?: number
+  presupuesto_maximo?: number
+  fecha_limite: string
+  funcionalidad?: number
+  usabilidad?: number
+  tiempo_estimado?: number
+  alcance?: number
+  presupuesto_estimado?: number
+  escalabilidad?: number
+  propuestas_count: number
+  created_at: string
+  cliente: {
+    user: {
+      nombre: string
+      avatar?: string
+    }
+  }
+  propuestas?: Propuesta[]
+}
+
+export interface Propuesta {
+  id: number
+  proyecto_id: number
+  titulo: string
+  descripcion: string
+  presupuesto: number
+  tiempo_entrega: number
+  likes_count: number
+  comentarios_count: number
+  color?: 'verde' | 'azul' | 'amarillo' | 'naranja' | 'rojo'
+  created_at: string
+  participante: {
+    id: number
+    user: {
+      nombre: string
+      avatar?: string
+    }
+  }
+  proyecto: {
+    id: number
+    titulo: string
+    estado: string
+  }
+}
+
+// ============================================
+// AUTENTICACIÓN
+// ============================================
 
 export const authApi = {
   register: (data: RegisterData) =>
@@ -150,68 +202,33 @@ export const authApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+
+  resendVerification: (email: string) =>
+    apiFetch<{ message: string }>('/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
 }
 
 // ============================================
 // IDEACIONES
 // ============================================
 
-export interface Ideacion {
-  id: number
-  publicacion_id: number
-  categoria: string
-  contexto_adicional?: string
-  areas_impacto?: string[]
-  publicacion: {
-    id: number
-    cliente_id: number
-    titulo: string
-    descripcion: string
-    tipo: 'ideacion'
-    estado: 'abierto' | 'cerrado' | 'archivado'
-    total_participaciones: number
-    fecha_cierre?: string
-    cliente: {
-      nombre: string
-      email: string
-    }
-  }
-  ideas?: Idea[]
-}
-
-export interface Idea {
-  id: number
-  ideacion_id: number
-  participante_id: number
-  titulo: string
-  descripcion: string
-  beneficios_esperados?: string
-  consideraciones_implementacion?: string
-  votos_count: number
-  porcentaje_votos: number
-  color_asignado: 'verde' | 'amarillo' | 'rojo' | 'sin_asignar'
-  estado: 'activa' | 'seleccionada_proyecto' | 'archivada'
-  participante: {
-    nombre: string
-    email: string
-  }
-  comentarios?: Comentario[]
-}
-
-export interface Comentario {
-  id: number
-  user_id: number
-  contenido: string
-  created_at: string
-  user: {
-    nombre: string
-    avatar?: string
-  }
-}
-
 export const ideacionApi = {
-  list: () =>
-    apiFetch<{ data: Ideacion[] }>('/ideaciones'),
+  // ✅ Manejar respuesta de Laravel (puede venir paginada o directa)
+  list: async (): Promise<{ ideaciones: Ideacion[] }> => {
+    const response = await apiFetch<any>('/ideaciones');
+    // Si viene paginada: { data: [...] }
+    // Si viene directa: { ideaciones: [...] }
+    // Si es array directo: [...]
+    if (Array.isArray(response)) {
+      return { ideaciones: response };
+    }
+    if (response.data && Array.isArray(response.data)) {
+      return { ideaciones: response.data };
+    }
+    return { ideaciones: response.ideaciones || [] };
+  },
 
   create: (data: {
     titulo: string
@@ -221,30 +238,30 @@ export const ideacionApi = {
     areas_impacto?: string[]
     fecha_cierre?: string
   }) =>
-    apiFetch('/ideaciones', {
+    apiFetch<{ ideacion: Ideacion }>('/ideaciones', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  get: (id: number) =>
-    apiFetch<{ publicacion: Ideacion; estadisticas: any }>(`/ideaciones/${id}`),
+  get: (id: string) =>
+    apiFetch<{ ideacion: Ideacion }>(`/ideaciones/${id}`),
 
-  update: (id: number, data: any) =>
-    apiFetch(`/ideaciones/${id}`, {
+  update: (id: string, data: any) =>
+    apiFetch<{ ideacion: Ideacion }>(`/ideaciones/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  delete: (id: number) =>
+  delete: (id: string) =>
     apiFetch(`/ideaciones/${id}`, { method: 'DELETE' }),
 
-  cerrar: (id: number) =>
+  cerrar: (id: string) =>
     apiFetch(`/ideaciones/${id}/cerrar`, { method: 'POST' }),
 
-  verConFiltro: (id: number) =>
-    apiFetch<{ publicacion: Ideacion; ideas: Idea[]; estadisticas: any }>(`/ideaciones/${id}/filtro`),
+  getWithFiltro: (id: string) =>
+    apiFetch<{ ideacion: Ideacion; ideas: Idea[]; estadisticas: any }>(`/ideaciones/${id}/filtro`),
 
-  seleccionarIdeas: (id: number, ideasIds: number[]) =>
+  seleccionarIdeas: (id: string, ideasIds: number[]) =>
     apiFetch(`/ideaciones/${id}/seleccionar`, {
       method: 'POST',
       body: JSON.stringify({ ideas_ids: ideasIds }),
@@ -256,8 +273,8 @@ export const ideacionApi = {
 // ============================================
 
 export const ideaApi = {
-  list: (ideacionId: number) =>
-    apiFetch<{ data: Idea[] }>(`/ideaciones/${ideacionId}/ideas`),
+  list: (ideacionId: string) =>
+    apiFetch<{ ideas: Idea[] }>(`/ideaciones/${ideacionId}/ideas`),
 
   create: (data: {
     ideacion_id: number
@@ -266,129 +283,129 @@ export const ideaApi = {
     beneficios_esperados?: string
     consideraciones_implementacion?: string
   }) =>
-    apiFetch('/ideas', {
+    apiFetch<{ idea: Idea }>('/ideas', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  get: (id: number) =>
-    apiFetch<Idea>(`/ideas/${id}`),
+  get: (id: string) =>
+    apiFetch<{ idea: Idea }>(`/ideas/${id}`),
 
-  update: (id: number, data: any) =>
-    apiFetch(`/ideas/${id}`, {
+  update: (id: string, data: any) =>
+    apiFetch<{ idea: Idea }>(`/ideas/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  delete: (id: number) =>
+  delete: (id: string) =>
     apiFetch(`/ideas/${id}`, { method: 'DELETE' }),
 
-  votar: (id: number) =>
-    apiFetch<{ message: string; votos_count: number; color_asignado: string }>(`/ideas/${id}/votar`, { method: 'POST' }),
+  votar: (id: string) =>
+    apiFetch<{ message: string; votos_count: number }>(`/ideas/${id}/votar`, { method: 'POST' }),
 
-  comentar: (id: number, contenido: string) =>
+  comentar: (id: string, contenido: string) =>
     apiFetch(`/ideas/${id}/comentar`, {
       method: 'POST',
       body: JSON.stringify({ contenido }),
     }),
 
-  misIdeas: () =>
-    apiFetch<{ data: Idea[] }>('/mis-ideas'),
+  myIdeas: () =>
+    apiFetch<{ ideas: Idea[] }>('/mis-ideas'),
 }
 
 // ============================================
 // PROYECTOS
 // ============================================
 
-export interface Proyecto {
-  id: number
-  publicacion_id: number
-  ideacion_origen_id?: number
-  idea_origen_id?: number
-  funcionalidad?: string
-  usabilidad?: string
-  tiempo_dias?: number
-  alcance?: string
-  presupuesto_min?: number
-  presupuesto_max?: number
-  escalabilidad?: string
-  publicacion: {
-    id: number
-    cliente_id: number
-    titulo: string
-    descripcion: string
-    tipo: 'proyecto'
-    estado: 'abierto' | 'en_evaluacion' | 'cerrado' | 'archivado'
-    criterios_publicos: boolean
-    total_participaciones: number
-    fecha_cierre?: string
-    cliente: {
-      nombre: string
-      email: string
-    }
-  }
-  propuestas?: Propuesta[]
-}
-
-export interface Propuesta {
-  id: number
-  proyecto_id: number
-  participante_id: number
-  titulo: string
-  descripcion: string
-  detalles_tecnicos?: string
-  costo_estimado: number
-  cronograma?: string
-  tiempo_estimado_dias?: number
-  likes_count: number
-  porcentaje_likes: number
-  color_asignado: 'verde' | 'azul' | 'amarillo' | 'naranja' | 'rojo' | 'sin_asignar'
-  puntaje_manual?: number
-  estado: 'pendiente' | 'evaluando' | 'aprobada' | 'rechazada' | 'guardada'
-  participante: {
-    nombre: string
-    email: string
-  }
-  comentarios?: Comentario[]
-}
-
 export const proyectoApi = {
-  list: () =>
-    apiFetch<{ data: Proyecto[] }>('/proyectos'),
+  // ✅ Maneja TANTO proyectos directos COMO publicaciones con proyecto anidado
+  getAll: async (): Promise<{ proyectos: Proyecto[] }> => {
+    const response = await apiFetch<any>('/proyectos');
+    
+    // 🐛 Solo en desarrollo: descomentar para debug
+    // console.log('📦 Respuesta de /proyectos:', response);
+    
+    let rawData: any[] = [];
+    
+    // Caso 1: Laravel paginate { data: [...], current_page, ... }
+    if (response.data && Array.isArray(response.data)) {
+      rawData = response.data;
+    }
+    // Caso 2: Array directo [...]
+    else if (Array.isArray(response)) {
+      rawData = response;
+    }
+    // Caso 3: { proyectos: [...] }
+    else if (response.proyectos && Array.isArray(response.proyectos)) {
+      rawData = response.proyectos;
+    }
+    else {
+      console.warn('⚠️ Formato inesperado en /proyectos:', response);
+      return { proyectos: [] };
+    }
+    
+    // ✅ NORMALIZAR: Si vienen publicaciones con proyecto anidado, extraer
+    const proyectos = rawData.map((item: any) => {
+      // Si es una Publicación con proyecto relacionado
+      if (item.proyecto && typeof item.proyecto === 'object') {
+        return {
+          id: item.id,
+          titulo: item.titulo,
+          descripcion: item.descripcion,
+          nicho: item.proyecto.nicho || item.categoria || 'General',
+          estado: item.estado,
+          presupuesto_minimo: item.proyecto.presupuesto_min ?? item.presupuesto_minimo,
+          presupuesto_maximo: item.proyecto.presupuesto_max ?? item.presupuesto_maximo,
+          fecha_limite: item.fecha_cierre || item.fecha_limite,
+          funcionalidad: item.proyecto.funcionalidad,
+          usabilidad: item.proyecto.usabilidad,
+          tiempo_estimado: item.proyecto.tiempo_dias ?? item.tiempo_estimado,
+          alcance: item.proyecto.alcance,
+          presupuesto_estimado: item.proyecto.presupuesto_estimado,
+          escalabilidad: item.proyecto.escalabilidad,
+          propuestas_count: item.total_participaciones ?? item.propuestas_count ?? 0,
+          created_at: item.created_at,
+          cliente: item.cliente || { user: { nombre: 'Cliente' } },
+          propuestas: item.propuestas
+        };
+      }
+      // Si ya viene como Proyecto directo, devolver tal cual
+      return item;
+    });
+    
+    return { proyectos };
+  },
 
-  create: (data: {
-    titulo: string
-    descripcion: string
-    criterios_publicos?: boolean
-    ideacion_origen_id?: number
-    idea_origen_id?: number
-    funcionalidad?: string
-    usabilidad?: string
-    tiempo_dias?: number
-    alcance?: string
-    presupuesto_min?: number
-    presupuesto_max?: number
-    escalabilidad?: string
-    fecha_cierre?: string
-  }) =>
-    apiFetch('/proyectos', {
+  // ✅ Maneja diferentes respuestas al crear
+  create: async (data: any): Promise<{ proyecto: Proyecto }> => {
+    const response = await apiFetch<any>('/proyectos', {
       method: 'POST',
       body: JSON.stringify(data),
-    }),
+    });
+    
+    // Backend puede devolver { publicacion: {...} } o { proyecto: {...} }
+    if (response.publicacion) {
+      return { proyecto: response.publicacion };
+    }
+    if (response.proyecto) {
+      return { proyecto: response.proyecto };
+    }
+    return { proyecto: response };
+  },
 
-  get: (id: number) =>
-    apiFetch<Proyecto>(`/proyectos/${id}`),
+  get: (id: string) =>
+    apiFetch<{ proyecto: Proyecto }>(`/proyectos/${id}`),
 
-  update: (id: number, data: any) =>
-    apiFetch(`/proyectos/${id}`, {
+  update: (id: string, data: any) =>
+    apiFetch<{ proyecto: Proyecto }>(`/proyectos/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  delete: (id: number) =>
+  delete: (id: string) =>
     apiFetch(`/proyectos/${id}`, { method: 'DELETE' }),
 
-  cerrar: (id: number) =>
+  cerrar: (id: string) =>
     apiFetch(`/proyectos/${id}/cerrar`, { method: 'POST' }),
 }
 
@@ -397,46 +414,38 @@ export const proyectoApi = {
 // ============================================
 
 export const propuestaApi = {
-  list: (proyectoId: number) =>
-    apiFetch<{ data: Propuesta[] }>(`/proyectos/${proyectoId}/propuestas`),
+  list: (proyectoId: string) =>
+    apiFetch<{ propuestas: Propuesta[] }>(`/proyectos/${proyectoId}/propuestas`),
 
-  create: (data: {
-    proyecto_id: number
-    titulo: string
-    descripcion: string
-    detalles_tecnicos?: string
-    costo_estimado: number
-    cronograma?: string
-    tiempo_estimado_dias?: number
-  }) =>
-    apiFetch('/propuestas', {
+  create: (proyectoId: string, data: any) =>
+    apiFetch<{ propuesta: Propuesta }>('/propuestas', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, proyecto_id: proyectoId }),
     }),
 
-  get: (id: number) =>
-    apiFetch<Propuesta>(`/propuestas/${id}`),
+  get: (id: string) =>
+    apiFetch<{ propuesta: Propuesta }>(`/propuestas/${id}`),
 
-  update: (id: number, data: any) =>
-    apiFetch(`/propuestas/${id}`, {
+  update: (id: string, data: any) =>
+    apiFetch<{ propuesta: Propuesta }>(`/propuestas/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  delete: (id: number) =>
+  delete: (id: string) =>
     apiFetch(`/propuestas/${id}`, { method: 'DELETE' }),
 
-  like: (id: number) =>
-    apiFetch<{ message: string; likes_count: number; color_asignado: string }>(`/propuestas/${id}/like`, { method: 'POST' }),
+  like: (id: string) =>
+    apiFetch<{ message: string; likes_count: number }>(`/propuestas/${id}/like`, { method: 'POST' }),
 
-  comentar: (id: number, contenido: string) =>
+  comentar: (id: string, contenido: string) =>
     apiFetch(`/propuestas/${id}/comentar`, {
       method: 'POST',
       body: JSON.stringify({ contenido }),
     }),
 
-  misPropuestas: () =>
-    apiFetch<{ data: Propuesta[] }>('/mis-propuestas'),
+  myProposals: () =>
+    apiFetch<{ propuestas: Propuesta[] }>('/mis-propuestas'),
 }
 
 // ============================================
@@ -444,11 +453,10 @@ export const propuestaApi = {
 // ============================================
 
 export const filtroApi = {
-  filtro1: (proyectoId: number) =>
+  filtro1: (proyectoId: string) =>
     apiFetch<{ proyecto: Proyecto; propuestas: Propuesta[]; estadisticas: any }>(`/proyectos/${proyectoId}/filtro1`),
 
-  filtro2Calificar: (data: {
-    propuesta_id: number
+  filtro2Calificar: (propuestaId: string, data: {
     deseable: number
     factible: number
     costo: number
@@ -457,21 +465,21 @@ export const filtroApi = {
   }) =>
     apiFetch('/filtro2/calificar', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ propuesta_id: propuestaId, ...data }),
     }),
 
-  filtro2Ranking: (proyectoId: number) =>
+  filtro2Ranking: (proyectoId: string) =>
     apiFetch(`/proyectos/${proyectoId}/filtro2/ranking`),
 
-  filtro3Evaluar: (data: {
-    propuesta_id: number
+  filtro3Evaluar: (propuestaId: string, data: {
     es_estrategico: boolean
-    es_tiempo_indicado?: boolean
+    es_tiempo_indicado: boolean
+    decision: string
     justificacion?: string
   }) =>
     apiFetch('/filtro3/evaluar', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ propuesta_id: propuestaId, ...data }),
     }),
 
   propuestasGuardadas: () =>
@@ -484,14 +492,10 @@ export const filtroApi = {
 
 export interface Reunion {
   id: number
-  reunion_sobre_id: number
-  reunion_sobre_type: string
-  cliente_id: number
-  participante_id: number
   fecha_hora: string
-  agenda?: string
-  notas?: string
-  link_reunion?: string
+  duracion: number
+  lugar: string
+  descripcion?: string
   estado: 'pendiente' | 'confirmada' | 'cancelada' | 'completada'
   cliente: { nombre: string }
   participante: { nombre: string }
@@ -499,46 +503,39 @@ export interface Reunion {
 
 export const reunionApi = {
   list: () =>
-    apiFetch<{ data: Reunion[] }>('/reuniones'),
+    apiFetch<{ reuniones: Reunion[] }>('/reuniones'),
 
   proximas: () =>
-    apiFetch<Reunion[]>('/reuniones-proximas'),
+    apiFetch<{ reuniones: Reunion[] }>('/reuniones-proximas'),
 
-  create: (data: {
-    tipo: 'idea' | 'propuesta'
-    registro_id: number
-    participante_id: number
-    fecha_hora: string
-    agenda?: string
-    link_reunion?: string
-  }) =>
-    apiFetch('/reuniones', {
+  create: (data: any) =>
+    apiFetch<{ reunion: Reunion }>('/reuniones', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  get: (id: number) =>
-    apiFetch<Reunion>(`/reuniones/${id}`),
+  get: (id: string) =>
+    apiFetch<{ reunion: Reunion }>(`/reuniones/${id}`),
 
-  update: (id: number, data: any) =>
-    apiFetch(`/reuniones/${id}`, {
+  update: (id: string, data: any) =>
+    apiFetch<{ reunion: Reunion }>(`/reuniones/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  confirmar: (id: number) =>
+  confirmar: (id: string) =>
     apiFetch(`/reuniones/${id}/confirmar`, { method: 'POST' }),
 
-  cancelar: (id: number) =>
+  cancelar: (id: string) =>
     apiFetch(`/reuniones/${id}/cancelar`, { method: 'POST' }),
 
-  completar: (id: number, notas?: string) =>
+  completar: (id: string, notas?: string) =>
     apiFetch(`/reuniones/${id}/completar`, {
       method: 'POST',
       body: JSON.stringify({ notas }),
     }),
 
-  delete: (id: number) =>
+  delete: (id: string) =>
     apiFetch(`/reuniones/${id}`, { method: 'DELETE' }),
 }
 
@@ -559,7 +556,7 @@ export interface Notificacion {
 
 export const notificacionApi = {
   list: () =>
-    apiFetch<{ data: Notificacion[] }>('/notificaciones'),
+    apiFetch<{ notificaciones: Notificacion[] }>('/notificaciones'),
 
   noLeidas: () =>
     apiFetch<{ total: number; notificaciones: Notificacion[] }>('/notificaciones/no-leidas'),
@@ -567,13 +564,13 @@ export const notificacionApi = {
   resumen: () =>
     apiFetch('/notificaciones/resumen'),
 
-  marcarLeida: (id: number) =>
+  marcarLeida: (id: string) =>
     apiFetch(`/notificaciones/${id}/leer`, { method: 'POST' }),
 
   marcarTodasLeidas: () =>
     apiFetch('/notificaciones/leer-todas', { method: 'POST' }),
 
-  delete: (id: number) =>
+  delete: (id: string) =>
     apiFetch(`/notificaciones/${id}`, { method: 'DELETE' }),
 
   limpiarLeidas: () =>
@@ -590,14 +587,18 @@ export const uploadApi = {
     formData.append('avatar', file)
 
     const token = getToken()
-    const response = await fetch(`${API_BASE_URL}/upload/avatar`, {
+    const response = await fetch(`${API_BASE_URL}/api/upload/avatar`, {
       method: 'POST',
-      credentials: 'include',
       headers: {
         'Authorization': `Bearer ${token}`,
       },
       body: formData,
     })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.message || 'Error al subir avatar')
+    }
 
     return response.json()
   },
@@ -605,21 +606,23 @@ export const uploadApi = {
   deleteAvatar: () =>
     apiFetch('/upload/avatar', { method: 'DELETE' }),
 
-  document: async (file: File, type: 'propuesta' | 'idea', relatedId: number) => {
+  document: async (file: File) => {
     const formData = new FormData()
     formData.append('document', file)
-    formData.append('type', type)
-    formData.append('related_id', relatedId.toString())
 
     const token = getToken()
-    const response = await fetch(`${API_BASE_URL}/upload/document`, {
+    const response = await fetch(`${API_BASE_URL}/api/upload/document`, {
       method: 'POST',
-      credentials: 'include',
       headers: {
         'Authorization': `Bearer ${token}`,
       },
       body: formData,
     })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.message || 'Error al subir documento')
+    }
 
     return response.json()
   },

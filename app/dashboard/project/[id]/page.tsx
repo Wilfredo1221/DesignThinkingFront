@@ -1,527 +1,927 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { useParams, useRouter, useSearchParams } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
-import {
-  ArrowLeft,
-  Heart,
-  Hash,
-  Calendar,
-  DollarSign,
-  Users,
-  User,
-  MessageSquare,
-  TrendingUp,
-  Clock,
-  CheckCircle2,
-  Send,
-  UserPlus,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
-import { useAuth } from "@/components/auth-provider"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { 
+  Rocket, Plus, Filter, Star, Calendar, MessageCircle, 
+  Heart, DollarSign, Clock, Target, CheckCircle2 
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/components/auth-provider';
+import { proyectoApi, propuestaApi, filtroApi, reunionApi } from '@/lib/api';
 
-// Mock data - Replace with real data fetching
-const mockProjectData = {
-  p1: {
-    title: "App de Salud Mental con IA",
-    description:
-      "Desarrollo de un asistente virtual empático para acompañamiento psicológico primario. La aplicación utilizará procesamiento de lenguaje natural para detectar estados de ánimo y ofrecer ejercicios de mindfulness personalizados.",
-    progress: 80,
-    likes: 256,
-    publisher: "HealthTech Solutions",
-    startDate: "2025-02-01",
-    endDate: "2025-06-30",
-    budget: "$50,000 USD",
-    hashtags: ["Salud", "IA", "Mobile"],
-    status: "active",
-    creator: {
-      name: "María González",
-      role: "Directora de TI",
-      avatar: "/placeholder.svg?height=100&width=100",
-    },
-    members: [
-      { name: "Carlos Ruiz", role: "Full Stack Developer", avatar: "/placeholder.svg?height=80&width=80" },
-      { name: "Ana Torres", role: "UI/UX Designer", avatar: "/placeholder.svg?height=80&width=80" },
-      { name: "Luis Mendoza", role: "Backend Developer", avatar: "/placeholder.svg?height=80&width=80" },
-      { name: "Sofia Vargas", role: "QA Engineer", avatar: "/placeholder.svg?height=80&width=80" },
-    ],
-    comments: [
-      {
-        id: 1,
-        author: "Carlos Ruiz",
-        avatar: "/placeholder.svg?height=60&width=60",
-        date: "Hace 2 días",
-        text: "El módulo de calificaciones ya está completado al 80%. Necesito feedback sobre la interfaz de ingreso de notas.",
-        likes: 8,
-      },
-      {
-        id: 2,
-        author: "Ana Torres",
-        avatar: "/placeholder.svg?height=60&width=60",
-        date: "Hace 1 día",
-        text: "He actualizado los wireframes del dashboard de estudiantes. ¿Podemos revisarlos en la próxima reunión?",
-        likes: 5,
-      },
-    ],
-  },
-  p2: {
-    title: "App de Delivery con IA",
-    description:
-      "Crear una aplicación móvil de delivery que utilice inteligencia artificial para optimizar rutas de entrega, predecir demanda y mejorar la experiencia del usuario con recomendaciones personalizadas.",
-    progress: 72,
-    likes: 203,
-    publisher: "FoodTech Solutions",
-    startDate: "1 Febrero 2025",
-    endDate: "30 Abril 2025",
-    budget: "$30,000 - $45,000",
-    hashtags: ["Mobile", "IA", "React Native", "Machine Learning"],
-    status: "active",
-    creator: {
-      name: "Roberto Sánchez",
-      role: "CEO",
-      avatar: "/placeholder.svg?height=100&width=100",
-    },
-    members: [
-      { name: "Diana López", role: "Mobile Developer", avatar: "/placeholder.svg?height=80&width=80" },
-      { name: "Fernando Castro", role: "ML Engineer", avatar: "/placeholder.svg?height=80&width=80" },
-      { name: "Patricia Rojas", role: "Product Manager", avatar: "/placeholder.svg?height=80&width=80" },
-    ],
-    comments: [
-      {
-        id: 1,
-        author: "Diana López",
-        avatar: "/placeholder.svg?height=60&width=60",
-        date: "Hace 3 días",
-        text: "La integración con el sistema de pagos está funcionando perfectamente. Probado en iOS y Android.",
-        likes: 15,
-      },
-    ],
-  },
-  "1": {
-    title: "E-commerce Sostenible",
-    description:
-      "Plataforma de comercio electrónico dedicada exclusivamente a productos sustentables y de bajo impacto ambiental. Buscamos desarrolladores comprometidos con el medio ambiente para crear una experiencia de compra única y ecológica.",
-    progress: 65,
-    likes: 89,
-    publisher: "EcoStore Inc.",
-    startDate: "2025-01-15",
-    endDate: "2025-06-30",
-    budget: "$5,000 - $8,000",
-    hashtags: ["React", "Node.js", "GreenTech"],
-    status: "active",
-    creator: {
-      name: "Elena Vega",
-      role: "Fundadora",
-      avatar: "/placeholder.svg?height=100&width=100",
-    },
-    members: [
-      { name: "Juan Pérez", role: "Frontend Dev", avatar: "/placeholder.svg?height=80&width=80" },
-      { name: "Laura M.", role: "Sustainability Expert", avatar: "/placeholder.svg?height=80&width=80" },
-    ],
-    comments: [
-      {
-        id: 1,
-        author: "Juan Pérez",
-        avatar: "/placeholder.svg?height=60&width=60",
-        date: "Hace 5 días",
-        text: "La estructura de la base de datos para los productos eco-friendly está lista.",
-        likes: 12,
-      },
-    ],
-  },
-  "3": {
-    title: "App de Meditación AI",
-    description:
-      "Aplicación móvil que utiliza inteligencia artificial para generar sesiones de meditación personalizadas basadas en el estado de ánimo del usuario, detectado a través de voz y patrones de uso.",
-    progress: 30,
-    likes: 156,
-    publisher: "Mindful Tech",
-    startDate: "2025-02-01",
-    endDate: "2025-08-15",
-    budget: "$10,000+",
-    hashtags: ["Flutter", "Python", "AI"],
-    status: "active",
-    creator: {
-      name: "David Chen",
-      role: "CTO",
-      avatar: "/placeholder.svg?height=100&width=100",
-    },
-    members: [
-      { name: "Sarah Connor", role: "AI Specialist", avatar: "/placeholder.svg?height=80&width=80" },
-      { name: "Mike Ross", role: "Mobile Dev", avatar: "/placeholder.svg?height=80&width=80" },
-    ],
-    comments: [],
-  },
+interface Propuesta {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  presupuesto: number;
+  tiempo_entrega: number;
+  likes_count: number;
+  comentarios_count: number;
+  color?: string;
+  participante: {
+    id: number;
+    user: {
+      nombre: string;
+      avatar?: string;
+    };
+  };
+  calificacion_manual?: {
+    deseable: number;
+    factible: number;
+    costo: number;
+    beneficio: number;
+    puntaje_total: number;
+  };
+  evaluacion_estrategica?: {
+    es_estrategico: boolean;
+    es_tiempo_indicado: boolean;
+    decision: string;
+    justificacion?: string;
+  };
+}
+
+interface Proyecto {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  nicho: string;
+  estado: string;
+  presupuesto_minimo: number;
+  presupuesto_maximo: number;
+  fecha_limite: string;
+  funcionalidad: number;
+  usabilidad: number;
+  tiempo_estimado: number;
+  alcance: number;
+  presupuesto_estimado: number;
+  escalabilidad: number;
+  cliente: {
+    user: {
+      nombre: string;
+      avatar?: string;
+    };
+  };
+  propuestas?: Propuesta[];
+  estadisticas_filtro1?: {
+    total: number;
+    verde: number;
+    azul: number;
+    amarillo: number;
+    naranja: number;
+    rojo: number;
+  };
 }
 
 export default function ProjectDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const projectId = params.id as string
-  const isFromMyProjects = searchParams.get("source") === "my-projects"
-  const project = mockProjectData[projectId as keyof typeof mockProjectData]
+  const params = useParams();
+  const router = useRouter();
+  const { user, isCliente, isParticipante } = useAuth();
+  const [proyecto, setProyecto] = useState<Proyecto | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('propuestas');
+  const [selectedPropuesta, setSelectedPropuesta] = useState<Propuesta | null>(null);
+  
+  const [calificando, setCalificando] = useState<number | null>(null);
+  const [formCalificacion, setFormCalificacion] = useState({
+    deseable: 3,
+    factible: 3,
+    costo: 2,
+    beneficio: 3,
+  });
 
-  const [liked, setLiked] = useState(false)
-  const [localLikes, setLocalLikes] = useState(project?.likes || 0)
-  const [newComment, setNewComment] = useState("")
-  const [comments, setComments] = useState(project?.comments || [])
-  const { user } = useAuth()
-  const [showJoinForm, setShowJoinForm] = useState(false)
-  const [selectedRole, setSelectedRole] = useState("")
-  const [joinSuccess, setJoinSuccess] = useState(false)
+  const [evaluando, setEvaluando] = useState<number | null>(null);
+  const [formEvaluacion, setFormEvaluacion] = useState({
+    es_estrategico: true,
+    es_tiempo_indicado: true,
+    decision: 'guardar_futuro',
+    justificacion: '',
+  });
 
-  const handleLike = () => {
-    if (!liked) {
-      setLocalLikes(localLikes + 1)
-      setLiked(true)
-    } else {
-      setLocalLikes(localLikes - 1)
-      setLiked(false)
-    }
-  }
+  const [agendandoReunion, setAgendandoReunion] = useState<number | null>(null);
+  const [formReunion, setFormReunion] = useState({
+    fecha: '',
+    hora: '',
+    duracion: '60',
+    lugar: '',
+    descripcion: '',
+  });
 
-  const handlePublishComment = () => {
-    if (newComment.trim()) {
-      const comment = {
-        id: comments.length + 1,
-        author: "Ronny Rau",
-        avatar: "/placeholder.svg?height=60&width=60",
-        date: "Ahora",
-        text: newComment,
-        likes: 0,
+  useEffect(() => {
+    cargarProyecto();
+  }, [params.id]);
+
+  const cargarProyecto = async () => {
+    try {
+      const response = await proyectoApi.get(params.id as string);
+      setProyecto(response.proyecto);
+      
+      if (isCliente()) {
+        await cargarFiltro1();
       }
-      setComments([...comments, comment])
-      setNewComment("")
+    } catch (error: unknown) {
+      console.error('Error al cargar proyecto:', error);
+      alert('Error al cargar el proyecto');
+      router.push('/dashboard');
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const handleJoinProject = () => {
-    if (selectedRole) {
-      setJoinSuccess(true)
-      setTimeout(() => {
-        setShowJoinForm(false)
-        setJoinSuccess(false)
-        setSelectedRole("")
-      }, 2000)
+  const cargarFiltro1 = async () => {
+    try {
+      const response = await filtroApi.filtro1(params.id as string);
+      setProyecto(prev => prev ? {
+        ...prev,
+        propuestas: response.propuestas,
+        estadisticas_filtro1: response.estadisticas
+      } : null);
+    } catch (error) {
+      console.error('Error al cargar filtro 1:', error);
     }
-  }
+  };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="container mx-auto py-8 px-4 max-w-7xl">
-        {/* Back Button */}
-        <Button variant="ghost" onClick={() => router.back()} className="mb-6 hover:bg-primary/10">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Volver
-        </Button>
+  const handleLike = async (propuestaId: number) => {
+    try {
+      await propuestaApi.like(propuestaId.toString());
+      await cargarProyecto();
+    } catch (error) {
+      console.error('Error al dar like:', error);
+    }
+  };
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Header Card */}
-            <Card className="border-none shadow-xl bg-gradient-to-br from-card to-card/50 backdrop-blur-sm">
-              <CardContent className="p-8">
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex-1">
-                    <Badge variant="secondary" className="bg-green-500/10 text-green-600 mb-3">
-                      {project.status === "active" ? "Activo" : "Completado"}
-                    </Badge>
-                    <h1 className="text-4xl font-bold mb-3 text-balance">{project.title}</h1>
-                    <p className="text-muted-foreground flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      Publicado por {project.publisher}
-                    </p>
-                  </div>
-                  <Button
-                    variant={liked ? "default" : "outline"}
-                    size="lg"
-                    onClick={handleLike}
-                    className={liked ? "bg-red-500 hover:bg-red-600" : ""}
-                  >
-                    <Heart className={`w-5 h-5 mr-2 ${liked ? "fill-current" : ""}`} />
-                    {localLikes}
-                  </Button>
-                </div>
+  const handleCalificar = async (propuestaId: number) => {
+    if (!isCliente()) return;
 
-                {/* Progress */}
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-primary" />
-                      Progreso del Proyecto
-                    </span>
-                    <span className="text-2xl font-bold text-primary">{project.progress}%</span>
-                  </div>
-                  <Progress value={project.progress} className="h-3" />
-                </div>
+    setCalificando(propuestaId);
+    try {
+      await filtroApi.filtro2Calificar(propuestaId.toString(), formCalificacion);
+      alert('Calificación guardada correctamente');
+      await cargarProyecto();
+      setSelectedPropuesta(null);
+    } catch (error) {
+      console.error('Error al calificar:', error);
+      alert('Error al guardar calificación');
+    } finally {
+      setCalificando(null);
+    }
+  };
 
-                {/* Description */}
-                <Separator className="my-6" />
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Descripción</h3>
-                  <p className="text-muted-foreground leading-relaxed">{project.description}</p>
-                </div>
+  const handleEvaluar = async (propuestaId: number) => {
+    if (!isCliente()) return;
 
-                {/* Hashtags */}
-                <div className="flex flex-wrap gap-2 mt-6">
-                  {project.hashtags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="bg-primary/5">
-                      <Hash className="w-3 h-3 mr-1" />
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+    setEvaluando(propuestaId);
+    try {
+      await filtroApi.filtro3Evaluar(propuestaId.toString(), formEvaluacion);
+      alert('Evaluación estratégica guardada');
+      
+      if (formEvaluacion.decision === 'agendar_reunion') {
+        setAgendandoReunion(propuestaId);
+      } else {
+        await cargarProyecto();
+        setSelectedPropuesta(null);
+      }
+    } catch (error) {
+      console.error('Error al evaluar:', error);
+      alert('Error al guardar evaluación');
+    } finally {
+      setEvaluando(null);
+    }
+  };
 
-            {/* Project Details Card */}
-            <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-primary" />
-                  Detalles del Proyecto
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-primary/5">
-                    <Calendar className="w-5 h-5 text-primary mt-1" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Fecha de Inicio</p>
-                      <p className="font-semibold">{project.startDate}</p>
-                    </div>
-                  </div>
+  const handleAgendarReunion = async () => {
+    if (!agendandoReunion) return;
 
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-primary/5">
-                    <Clock className="w-5 h-5 text-primary mt-1" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Fecha de Entrega</p>
-                      <p className="font-semibold">{project.endDate}</p>
-                    </div>
-                  </div>
+    try {
+      await reunionApi.create({
+        ...formReunion,
+        fecha_hora: `${formReunion.fecha}T${formReunion.hora}`,
+        duracion: parseInt(formReunion.duracion),
+        reunionable_type: 'App\\Models\\Propuesta',
+        reunionable_id: agendandoReunion,
+      });
+      
+      alert('Reunión agendada correctamente');
+      setAgendandoReunion(null);
+      setSelectedPropuesta(null);
+      await cargarProyecto();
+    } catch (error) {
+      console.error('Error al agendar reunión:', error);
+      alert('Error al agendar reunión');
+    }
+  };
 
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-primary/5">
-                    <DollarSign className="w-5 h-5 text-primary mt-1" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Presupuesto</p>
-                      <p className="font-semibold">{project.budget}</p>
-                    </div>
-                  </div>
+  const getColorBadge = (color?: string) => {
+    if (!color) return null;
 
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-primary/5">
-                    <Users className="w-5 h-5 text-primary mt-1" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Miembros del Equipo</p>
-                      <p className="font-semibold">{project.members.length} miembros</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+    const colorMap: Record<string, { bg: string; text: string; label: string; icon: string }> = {
+      verde: { bg: 'bg-green-500', text: 'text-white', label: 'Verde', icon: '🟢' },
+      azul: { bg: 'bg-blue-500', text: 'text-white', label: 'Azul', icon: '🔵' },
+      amarillo: { bg: 'bg-yellow-500', text: 'text-black', label: 'Amarillo', icon: '🟡' },
+      naranja: { bg: 'bg-orange-500', text: 'text-white', label: 'Naranja', icon: '🟠' },
+      rojo: { bg: 'bg-red-500', text: 'text-white', label: 'Rojo', icon: '🔴' },
+    };
 
-            {/* Comments Section */}
-            <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-primary" />
-                  Comentarios ({comments.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* New Comment Form */}
-                <div className="space-y-3">
-                  <Textarea
-                    placeholder="Escribe un comentario..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    className="resize-none min-h-[100px]"
-                  />
-                  <Button onClick={handlePublishComment} disabled={!newComment.trim()}>
-                    <Send className="w-4 h-4 mr-2" />
-                    Publicar Comentario
-                  </Button>
-                </div>
+    const style = colorMap[color];
+    if (!style) return null;
 
-                <Separator />
+    return (
+      <Badge className={`${style.bg} ${style.text}`}>
+        {style.icon} {style.label}
+      </Badge>
+    );
+  };
 
-                {/* Comments List */}
-                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                  {comments.map((comment) => (
-                    <motion.div
-                      key={comment.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex gap-4 p-4 rounded-lg bg-background/50 hover:bg-background/80 transition-colors"
-                    >
-                      <Avatar>
-                        <AvatarImage src={comment.avatar || "/placeholder.svg"} />
-                        <AvatarFallback>{comment.author[0]}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <div>
-                            <p className="font-semibold">{comment.author}</p>
-                            <p className="text-xs text-muted-foreground">{comment.date}</p>
-                          </div>
-                          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-500">
-                            <Heart className="w-4 h-4 mr-1" />
-                            {comment.likes}
-                          </Button>
-                        </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed">{comment.text}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Creator Card */}
-            <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-base">Creado por</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  <Avatar className="w-16 h-16">
-                    <AvatarImage src={project.creator.avatar || "/placeholder.svg"} />
-                    <AvatarFallback>{project.creator.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold text-lg">{project.creator.name}</p>
-                    <p className="text-sm text-muted-foreground">{project.creator.role}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Team Members Card */}
-            <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Miembros y Roles
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {project.members.map((member, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-background/50 hover:bg-background/80 transition-colors"
-                    >
-                      <Avatar>
-                        <AvatarImage src={member.avatar || "/placeholder.svg"} />
-                        <AvatarFallback>{member.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-sm">{member.name}</p>
-                        <p className="text-xs text-muted-foreground">{member.role}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Participar button for participants only */}
-                {user?.role === "participante" && !isFromMyProjects && (
-                  <div className="mt-6">
-                    <AnimatePresence>
-                      {!showJoinForm ? (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                          <Button onClick={() => setShowJoinForm(true)} className="w-full" size="lg">
-                            <UserPlus className="w-4 h-4 mr-2" />
-                            Participar
-                          </Button>
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          className="space-y-4 p-4 rounded-lg bg-primary/5 border border-primary/20"
-                        >
-                          {!joinSuccess ? (
-                            <>
-                              <div className="space-y-2">
-                                <Label htmlFor="role">Selecciona tu rol</Label>
-                                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                                  <SelectTrigger id="role">
-                                    <SelectValue placeholder="Elegir rol..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="frontend">Frontend Developer</SelectItem>
-                                    <SelectItem value="backend">Backend Developer</SelectItem>
-                                    <SelectItem value="fullstack">Full Stack Developer</SelectItem>
-                                    <SelectItem value="designer">UI/UX Designer</SelectItem>
-                                    <SelectItem value="qa">QA Engineer</SelectItem>
-                                    <SelectItem value="pm">Product Manager</SelectItem>
-                                    <SelectItem value="devops">DevOps Engineer</SelectItem>
-                                    <SelectItem value="data">Data Scientist</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button onClick={handleJoinProject} disabled={!selectedRole} className="flex-1">
-                                  <UserPlus className="w-4 h-4 mr-2" />
-                                  Unirme
-                                </Button>
-                                <Button variant="outline" onClick={() => setShowJoinForm(false)} className="flex-1">
-                                  Cancelar
-                                </Button>
-                              </div>
-                            </>
-                          ) : (
-                            <motion.div
-                              initial={{ scale: 0.8 }}
-                              animate={{ scale: 1 }}
-                              className="flex items-center justify-center gap-2 text-green-600 py-4"
-                            >
-                              <CheckCircle2 className="w-6 h-6" />
-                              <span className="font-semibold">¡Te has unido al proyecto!</span>
-                            </motion.div>
-                          )}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Niches Card */}
-            <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Hash className="w-5 h-5" />
-                  Nichos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {project.hashtags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="bg-primary/10">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Cargando proyecto...</p>
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (!proyecto) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <p>Proyecto no encontrado</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="mb-8">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge>{proyecto.nicho}</Badge>
+                <Badge variant={proyecto.estado === 'abierto' ? 'default' : 'secondary'}>
+                  {proyecto.estado}
+                </Badge>
+              </div>
+              <h1 className="text-4xl font-bold mb-2">{proyecto.titulo}</h1>
+              <p className="text-muted-foreground text-lg">{proyecto.descripcion}</p>
+            </div>
+
+            {isParticipante() && proyecto.estado === 'abierto' && (
+              <Button onClick={() => router.push(`/dashboard/create/proposal?proyecto=${proyecto.id}`)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Enviar Propuesta
+              </Button>
+            )}
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-4">
+            <Card className="p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                <DollarSign className="h-4 w-4" />
+                Presupuesto
+              </div>
+              <p className="font-bold">${proyecto.presupuesto_minimo} - ${proyecto.presupuesto_maximo}</p>
+            </Card>
+
+            <Card className="p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                <Clock className="h-4 w-4" />
+                Tiempo Máximo
+              </div>
+              <p className="font-bold">{proyecto.tiempo_estimado} días</p>
+            </Card>
+
+            <Card className="p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                <Calendar className="h-4 w-4" />
+                Fecha Límite
+              </div>
+              <p className="font-bold">{new Date(proyecto.fecha_limite).toLocaleDateString()}</p>
+            </Card>
+
+            <Card className="p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                <Rocket className="h-4 w-4" />
+                Propuestas
+              </div>
+              <p className="font-bold">{proyecto.propuestas?.length || 0}</p>
+            </Card>
+          </div>
+        </div>
+
+        <Card className="p-6 mb-8">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Criterios de Evaluación
+          </h3>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div>
+              <Label className="text-sm text-muted-foreground">Funcionalidad</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-secondary h-2 rounded-full">
+                  <div 
+                    className="bg-primary h-2 rounded-full" 
+                    style={{ width: `${proyecto.funcionalidad * 10}%` }}
+                  />
+                </div>
+                <span className="font-bold">{proyecto.funcionalidad}/10</span>
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm text-muted-foreground">Usabilidad</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-secondary h-2 rounded-full">
+                  <div 
+                    className="bg-primary h-2 rounded-full" 
+                    style={{ width: `${proyecto.usabilidad * 10}%` }}
+                  />
+                </div>
+                <span className="font-bold">{proyecto.usabilidad}/10</span>
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm text-muted-foreground">Alcance</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-secondary h-2 rounded-full">
+                  <div 
+                    className="bg-primary h-2 rounded-full" 
+                    style={{ width: `${proyecto.alcance * 10}%` }}
+                  />
+                </div>
+                <span className="font-bold">{proyecto.alcance}/10</span>
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm text-muted-foreground">Presupuesto</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-secondary h-2 rounded-full">
+                  <div 
+                    className="bg-primary h-2 rounded-full" 
+                    style={{ width: `${proyecto.presupuesto_estimado * 10}%` }}
+                  />
+                </div>
+                <span className="font-bold">{proyecto.presupuesto_estimado}/10</span>
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm text-muted-foreground">Escalabilidad</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-secondary h-2 rounded-full">
+                  <div 
+                    className="bg-primary h-2 rounded-full" 
+                    style={{ width: `${proyecto.escalabilidad * 10}%` }}
+                  />
+                </div>
+                <span className="font-bold">{proyecto.escalabilidad}/10</span>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="propuestas">
+              Todas las Propuestas
+            </TabsTrigger>
+            {isCliente() && (
+              <>
+                <TabsTrigger value="filtro1">
+                  <Filter className="mr-2 h-4 w-4" />
+                  Filtro 1: Colores
+                </TabsTrigger>
+                <TabsTrigger value="filtro2">
+                  <Star className="mr-2 h-4 w-4" />
+                  Filtro 2: Calificación
+                </TabsTrigger>
+                <TabsTrigger value="filtro3">
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Filtro 3: Estratégico
+                </TabsTrigger>
+              </>
+            )}
+          </TabsList>
+
+          <TabsContent value="propuestas" className="mt-6">
+            {proyecto.propuestas && proyecto.propuestas.length > 0 ? (
+              <div className="grid gap-6">
+                {proyecto.propuestas.map((propuesta) => (
+                  <Card key={propuesta.id} className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold mb-2">{propuesta.titulo}</h3>
+                        <p className="text-muted-foreground mb-4">{propuesta.descripcion}</p>
+                        
+                        <div className="flex items-center gap-4 text-sm">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleLike(propuesta.id)}
+                          >
+                            <Heart className="mr-1 h-4 w-4" />
+                            {propuesta.likes_count}
+                          </Button>
+                          <span className="flex items-center gap-1">
+                            <MessageCircle className="h-4 w-4" />
+                            {propuesta.comentarios_count}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="h-4 w-4" />
+                            ${propuesta.presupuesto}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {propuesta.tiempo_entrega} días
+                          </span>
+                        </div>
+                      </div>
+
+                      {isCliente() && (
+                        <Button onClick={() => setSelectedPropuesta(propuesta)}>
+                          Ver Detalles
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="p-12 text-center">
+                <p className="text-muted-foreground">No hay propuestas aún</p>
+              </Card>
+            )}
+          </TabsContent>
+
+          {isCliente() && (
+            <TabsContent value="filtro1" className="mt-6">
+              {proyecto.estadisticas_filtro1 && (
+                <Card className="p-6 mb-6">
+                  <h3 className="text-lg font-semibold mb-4">Distribución por Colores</h3>
+                  <div className="flex gap-4 flex-wrap">
+                    <Badge className="bg-green-500 text-white">
+                      🟢 Verde: {proyecto.estadisticas_filtro1.verde}
+                    </Badge>
+                    <Badge className="bg-blue-500 text-white">
+                      🔵 Azul: {proyecto.estadisticas_filtro1.azul}
+                    </Badge>
+                    <Badge className="bg-yellow-500 text-black">
+                      🟡 Amarillo: {proyecto.estadisticas_filtro1.amarillo}
+                    </Badge>
+                    <Badge className="bg-orange-500 text-white">
+                      🟠 Naranja: {proyecto.estadisticas_filtro1.naranja}
+                    </Badge>
+                    <Badge className="bg-red-500 text-white">
+                      🔴 Rojo: {proyecto.estadisticas_filtro1.rojo}
+                    </Badge>
+                  </div>
+                </Card>
+              )}
+
+              <div className="grid gap-6">
+                {proyecto.propuestas?.map((propuesta) => (
+                  <Card key={propuesta.id} className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-3">
+                          {getColorBadge(propuesta.color)}
+                        </div>
+                        <h3 className="text-xl font-bold mb-2">{propuesta.titulo}</h3>
+                        <p className="text-muted-foreground mb-4">{propuesta.descripcion}</p>
+                        
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="flex items-center gap-1">
+                            <Heart className="h-4 w-4" />
+                            {propuesta.likes_count}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="h-4 w-4" />
+                            ${propuesta.presupuesto}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {propuesta.tiempo_entrega} días
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+          )}
+
+          {isCliente() && (
+            <TabsContent value="filtro2" className="mt-6">
+              <div className="grid gap-6">
+                {proyecto.propuestas
+                  ?.filter(p => ['verde', 'azul', 'amarillo'].includes(p.color || ''))
+                  .map((propuesta) => (
+                    <Card key={propuesta.id} className="p-6">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-3">
+                            {getColorBadge(propuesta.color)}
+                            {propuesta.calificacion_manual && (
+                              <Badge variant="secondary">
+                                ⭐ {propuesta.calificacion_manual.puntaje_total}/19 pts
+                              </Badge>
+                            )}
+                          </div>
+                          <h3 className="text-xl font-bold mb-2">{propuesta.titulo}</h3>
+                          
+                          {propuesta.calificacion_manual ? (
+                            <div className="grid grid-cols-4 gap-4 mt-4">
+                              <div>
+                                <Label className="text-xs">Deseable</Label>
+                                <p className="font-bold">{propuesta.calificacion_manual.deseable}/5</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Factible</Label>
+                                <p className="font-bold">{propuesta.calificacion_manual.factible}/5</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Costo</Label>
+                                <p className="font-bold">{propuesta.calificacion_manual.costo}/4</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Beneficio</Label>
+                                <p className="font-bold">{propuesta.calificacion_manual.beneficio}/5</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <Button
+                              onClick={() => setSelectedPropuesta(propuesta)}
+                              variant="outline"
+                            >
+                              Calificar Propuesta
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+              </div>
+            </TabsContent>
+          )}
+
+          {isCliente() && (
+            <TabsContent value="filtro3" className="mt-6">
+              <div className="grid gap-6">
+                {proyecto.propuestas
+                  ?.filter(p => p.calificacion_manual)
+                  .sort((a, b) => 
+                    (b.calificacion_manual?.puntaje_total || 0) - 
+                    (a.calificacion_manual?.puntaje_total || 0)
+                  )
+                  .map((propuesta) => (
+                    <Card key={propuesta.id} className="p-6">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-3">
+                            {getColorBadge(propuesta.color)}
+                            <Badge variant="secondary">
+                              ⭐ {propuesta.calificacion_manual?.puntaje_total}/19 pts
+                            </Badge>
+                            {propuesta.evaluacion_estrategica && (
+                              <Badge>
+                                {propuesta.evaluacion_estrategica.decision === 'guardar_futuro' && '📌 Guardado'}
+                                {propuesta.evaluacion_estrategica.decision === 'agendar_reunion' && '📅 Reunión'}
+                                {propuesta.evaluacion_estrategica.decision === 'posponer' && '⏸️ Pospuesto'}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <h3 className="text-xl font-bold mb-2">{propuesta.titulo}</h3>
+                          
+                          {propuesta.evaluacion_estrategica ? (
+                            <div className="mt-4 p-4 bg-secondary rounded-lg">
+                              <div className="grid grid-cols-2 gap-4 mb-2">
+                                <div>
+                                  <Label className="text-xs">Estratégico</Label>
+                                  <p>{propuesta.evaluacion_estrategica.es_estrategico ? '✅ Sí' : '❌ No'}</p>
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Tiempo Indicado</Label>
+                                  <p>{propuesta.evaluacion_estrategica.es_tiempo_indicado ? '✅ Sí' : '❌ No'}</p>
+                                </div>
+                              </div>
+                              {propuesta.evaluacion_estrategica.justificacion && (
+                                <div className="mt-2">
+                                  <Label className="text-xs">Justificación</Label>
+                                  <p className="text-sm">{propuesta.evaluacion_estrategica.justificacion}</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <Button
+                              onClick={() => setSelectedPropuesta(propuesta)}
+                              variant="outline"
+                            >
+                              Evaluar Estratégicamente
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+              </div>
+            </TabsContent>
+          )}
+        </Tabs>
+
+        {selectedPropuesta && !selectedPropuesta.calificacion_manual && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <h3 className="text-2xl font-bold mb-4">Calificar: {selectedPropuesta.titulo}</h3>
+              
+              <div className="space-y-4 mb-6">
+                <div>
+                  <Label>Deseable (1-5)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="5"
+                    value={formCalificacion.deseable}
+                    onChange={(e) => setFormCalificacion(prev => ({
+                      ...prev,
+                      deseable: parseInt(e.target.value)
+                    }))}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    ¿Qué tanto deseas esta solución?
+                  </p>
+                </div>
+
+                <div>
+                  <Label>Factible (1-5)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="5"
+                    value={formCalificacion.factible}
+                    onChange={(e) => setFormCalificacion(prev => ({
+                      ...prev,
+                      factible: parseInt(e.target.value)
+                    }))}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    ¿Qué tan factible es implementarla?
+                  </p>
+                </div>
+
+                <div>
+                  <Label>Costo (1-4)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="4"
+                    value={formCalificacion.costo}
+                    onChange={(e) => setFormCalificacion(prev => ({
+                      ...prev,
+                      costo: parseInt(e.target.value)
+                    }))}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    1=Muy costoso, 4=Muy económico
+                  </p>
+                </div>
+
+                <div>
+                  <Label>Beneficio (1-5)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="5"
+                    value={formCalificacion.beneficio}
+                    onChange={(e) => setFormCalificacion(prev => ({
+                      ...prev,
+                      beneficio: parseInt(e.target.value)
+                    }))}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    ¿Qué tanto beneficio traerá?
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedPropuesta(null)}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={() => handleCalificar(selectedPropuesta.id)}
+                  disabled={!!calificando}
+                  className="flex-1"
+                >
+                  {calificando ? 'Guardando...' : 'Guardar Calificación'}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {selectedPropuesta && selectedPropuesta.calificacion_manual && !selectedPropuesta.evaluacion_estrategica && !agendandoReunion && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <h3 className="text-2xl font-bold mb-4">Evaluación Estratégica: {selectedPropuesta.titulo}</h3>
+              
+              <div className="space-y-4 mb-6">
+                <div className="flex items-center gap-4">
+                  <input
+                    type="checkbox"
+                    id="es_estrategico"
+                    checked={formEvaluacion.es_estrategico}
+                    onChange={(e) => setFormEvaluacion(prev => ({
+                      ...prev,
+                      es_estrategico: e.target.checked
+                    }))}
+                    className="w-5 h-5"
+                  />
+                  <Label htmlFor="es_estrategico" className="text-base">
+                    ¿Es estratégico para la empresa?
+                  </Label>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <input
+                    type="checkbox"
+                    id="es_tiempo_indicado"
+                    checked={formEvaluacion.es_tiempo_indicado}
+                    onChange={(e) => setFormEvaluacion(prev => ({
+                      ...prev,
+                      es_tiempo_indicado: e.target.checked
+                    }))}
+                    className="w-5 h-5"
+                  />
+                  <Label htmlFor="es_tiempo_indicado" className="text-base">
+                    ¿Es el tiempo indicado?
+                  </Label>
+                </div>
+
+                <div>
+                  <Label>Decisión Final</Label>
+                  <select
+                    className="w-full p-2 border rounded-md"
+                    value={formEvaluacion.decision}
+                    onChange={(e) => setFormEvaluacion(prev => ({
+                      ...prev,
+                      decision: e.target.value
+                    }))}
+                  >
+                    <option value="guardar_futuro">📌 Guardar para el futuro</option>
+                    <option value="agendar_reunion">📅 Agendar reunión</option>
+                    <option value="posponer">⏸️ Posponer</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label>Justificación (Opcional)</Label>
+                  <Textarea
+                    value={formEvaluacion.justificacion}
+                    onChange={(e) => setFormEvaluacion(prev => ({
+                      ...prev,
+                      justificacion: e.target.value
+                    }))}
+                    rows={4}
+                    placeholder="Explica tu decisión..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedPropuesta(null)}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={() => handleEvaluar(selectedPropuesta.id)}
+                  disabled={!!evaluando}
+                  className="flex-1"
+                >
+                  {evaluando ? 'Guardando...' : 'Guardar Evaluación'}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {agendandoReunion && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <h3 className="text-2xl font-bold mb-4">Agendar Reunión</h3>
+              
+              <div className="space-y-4 mb-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Fecha</Label>
+                    <Input
+                      type="date"
+                      value={formReunion.fecha}
+                      onChange={(e) => setFormReunion(prev => ({
+                        ...prev,
+                        fecha: e.target.value
+                      }))}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Hora</Label>
+                    <Input
+                      type="time"
+                      value={formReunion.hora}
+                      onChange={(e) => setFormReunion(prev => ({
+                        ...prev,
+                        hora: e.target.value
+                      }))}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Duración (minutos)</Label>
+                  <Input
+                    type="number"
+                    min="15"
+                    step="15"
+                    value={formReunion.duracion}
+                    onChange={(e) => setFormReunion(prev => ({
+                      ...prev,
+                      duracion: e.target.value
+                    }))}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label>Lugar</Label>
+                  <Input
+                    value={formReunion.lugar}
+                    onChange={(e) => setFormReunion(prev => ({
+                      ...prev,
+                      lugar: e.target.value
+                    }))}
+                    placeholder="Oficina, Zoom, Google Meet..."
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label>Descripción</Label>
+                  <Textarea
+                    value={formReunion.descripcion}
+                    onChange={(e) => setFormReunion(prev => ({
+                      ...prev,
+                      descripcion: e.target.value
+                    }))}
+                    rows={3}
+                    placeholder="Agenda de la reunión..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAgendandoReunion(null);
+                    setSelectedPropuesta(null);
+                  }}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleAgendarReunion}
+                  className="flex-1"
+                >
+                  Agendar Reunión
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+      </motion.div>
     </div>
-  )
+  );
 }
